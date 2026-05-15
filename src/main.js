@@ -8,6 +8,9 @@ import footUrl from '/parts/foot.svg?url'
 import faceUrl from '/parts/face.svg?url'
 import faceSurprisedUrl from '/parts/face_surprised.svg?url'
 import faceSleepyUrl from '/parts/sleepy.svg?url'
+import faceThoughtfulUrl from '/parts/Toughtful.svg?url'
+import faceWhistlingUrl from '/parts/Whistling.svg?url'
+import faceWinkingUrl from '/parts/Winking.svg?url'
 
 const SVG_PX_PER_UNIT = 100
 
@@ -39,9 +42,21 @@ const tune = {
     SLEEPY: true,    // swap to sleepy.svg face after a few seconds of rest
 }
 
-// Seconds the body must stay still before the face goes sleepy.
-const SLEEPY_AFTER = 2.5
+// Rest-time face progression (seconds). The longer the ragdoll sits still,
+// the further the face drifts through an "idle personality" arc.
+//   0           → Cheers (default)
+//   THOUGHTFUL  → Thoughtful (with periodic Winking blinks)
+//   WHISTLING   → Whistling
+//   SLEEPY      → Sleepy
+// Master toggle is tune.SLEEPY; when false the face stays at Cheers regardless.
+const REST_THOUGHTFUL = 1.5
+const REST_WHISTLING = 4.0
+const REST_SLEEPY = 7.0
+const WINK_DURATION = 0.15
 let restTime = 0
+// Wink scheduling, both measured in restTime seconds (same clock).
+let nextWinkAt = 0
+let winkUntil = 0
 const deg2rad = (d) => (d * Math.PI) / 180
 
 const BODYPARTS = 1 << 2
@@ -73,6 +88,9 @@ const sprites = {
     face: await loadImage(faceUrl),
     faceSurprised: await loadImage(faceSurprisedUrl),
     faceSleepy: await loadImage(faceSleepyUrl),
+    faceThoughtful: await loadImage(faceThoughtfulUrl),
+    faceWhistling: await loadImage(faceWhistlingUrl),
+    faceWinking: await loadImage(faceWinkingUrl),
 }
 
 // Bobble-inertia state for the face: an angle (and angular velocity) that
@@ -290,6 +308,8 @@ function buildWorld() {
     faceAngle = shell.angle
     faceAngularVel = 0
     restTime = 0
+    nextWinkAt = REST_THOUGHTFUL + 1.0 + 0.5 * Math.random()
+    winkUntil = 0
 }
 
 function drawSprite(body) {
@@ -310,13 +330,29 @@ function drawSprite(body) {
     ctx.restore()
 }
 
+function chooseFace() {
+    // Held wins over everything: a grabbed peanut is always surprised.
+    if (dragging || mouseConstraint) return sprites.faceSurprised
+    // Master toggle: when off, never leave the default face.
+    if (!tune.SLEEPY) return sprites.face
+    if (restTime >= REST_SLEEPY) return sprites.faceSleepy
+    if (restTime >= REST_WHISTLING) return sprites.faceWhistling
+    if (restTime >= REST_THOUGHTFUL) {
+        // Thoughtful with occasional ~150ms wink blinks (every 1.5–3s).
+        if (restTime < winkUntil) return sprites.faceWinking
+        if (restTime >= nextWinkAt) {
+            winkUntil = restTime + WINK_DURATION
+            nextWinkAt = winkUntil + 1.5 + 1.5 * Math.random()
+            return sprites.faceWinking
+        }
+        return sprites.faceThoughtful
+    }
+    return sprites.face
+}
+
 function drawFace() {
     const shell = parts.shell
-    // Face picker: held > sleepy > default. Sleepy is gated by tune.SLEEPY
-    // so it can be turned off live if it doesn't read well.
-    let img = sprites.face
-    if (dragging || mouseConstraint) img = sprites.faceSurprised
-    else if (tune.SLEEPY && restTime >= SLEEPY_AFTER) img = sprites.faceSleepy
+    const img = chooseFace()
     ctx.save()
     const s = worldToScreen(shell.position[0], shell.position[1])
     ctx.translate(s.x, s.y)
@@ -451,8 +487,15 @@ function updateRest(dt) {
     const w = Math.abs(shell.angularVelocity)
     // "Still" = low linear + angular velocity and the player isn't holding it.
     const still = v < 0.05 && w < 0.1 && !mouseConstraint
-    if (still) restTime += dt
-    else restTime = 0
+    if (still) {
+        restTime += dt
+    } else {
+        restTime = 0
+        // Push the first wink out so it doesn't fire the instant we re-enter
+        // the thoughtful stage.
+        nextWinkAt = REST_THOUGHTFUL + 1.0 + 0.5 * Math.random()
+        winkUntil = 0
+    }
 }
 window.__ragdoll = {
     pause: () => { paused = true },
@@ -475,6 +518,21 @@ window.__ragdoll = {
     },
     setFace: (cfg) => Object.assign(faceCfg, cfg),
     getFace: () => ({ ...faceCfg }),
+    // Swap face sprites at runtime — used by the face-generator screenshot
+    // probe to preview every variant on the actual ragdoll. Pass one Image to
+    // set all face slots, or {default, surprised, sleepy} to override slots
+    // individually.
+    setFaceSprite: (img) => {
+        if (img && img.tagName === 'IMG') {
+            sprites.face = img
+            sprites.faceSurprised = img
+            sprites.faceSleepy = img
+        } else if (img && typeof img === 'object') {
+            if (img.default) sprites.face = img.default
+            if (img.surprised) sprites.faceSurprised = img.surprised
+            if (img.sleepy) sprites.faceSleepy = img.sleepy
+        }
+    },
     tune,
     setTune: (patch) => {
         Object.assign(tune, patch)
