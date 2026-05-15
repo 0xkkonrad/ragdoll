@@ -75,6 +75,18 @@ function eyesSleeping() {
     ].join('\n')
 }
 
+// Wink: left eye open (regular brand eye), right eye closed (^ smile-eye line).
+function eyesWinkRight() {
+    const w = 14
+    return [
+        `<path d="${EYE_LEFT_OUTLINE}" fill="black"/>`,
+        `<path d="${EYE_LEFT_SCLERA}" fill="white"/>`,
+        `<path d="${EYE_LEFT_GLINT}" fill="white"/>`,
+        `<path d="${EYE_LEFT_PUPIL}" fill="${YELLOW}"/>`,
+        `<path d="M134 95 Q 187 50 240 95" stroke="black" stroke-width="${w}" fill="none" stroke-linecap="round"/>`,
+    ].join('\n')
+}
+
 // ============ MOUTH VARIANTS ============
 // All mouths sit inside a "smile band" roughly y=180..280, x=18..235 in
 // viewBox-units. Stroke matches the eye stroke for consistency.
@@ -128,37 +140,54 @@ function mouthLaugh() {
 // Tiny neutral mouth — short relaxed line. Used in sleeping faces so the face
 // reads as "asleep, content" rather than "frowning".
 function mouthTiny() {
-    return `<path d="M102 235 Q 126 246 150 235" stroke="black" stroke-width="12" fill="none" stroke-linecap="round"/>`
+    return `<path d="M99 235 Q 126 247 153 235" stroke="black" stroke-width="13" fill="none" stroke-linecap="round"/>`
+}
+
+// Sad / disappointed — mirror image of mouthSmileSmall, curving down.
+function mouthFrownSmall() {
+    return `<path d="M70 252 Q 126 214 182 252" stroke="black" stroke-width="${SW}" fill="none" stroke-linecap="round"/>`
+}
+
+// Bigger frown — corners pulled further down.
+function mouthFrownBig() {
+    return `<path d="M55 268 Q 126 195 197 268" stroke="black" stroke-width="${SW}" fill="none" stroke-linecap="round"/>`
+}
+
+// "O" / surprise mouth — small round black oval, separate from the eye change.
+// Useful as a "speechless" reaction independent of the held/surprised swap.
+function mouthOh() {
+    return [
+        `<ellipse cx="126" cy="235" rx="22" ry="26" fill="black"/>`,
+        `<ellipse cx="126" cy="240" rx="14" ry="16" fill="${RED}"/>`,
+    ].join('\n')
 }
 
 // Decorative "Z"s for sleeping. Each Z is a chunky filled polygon (not a
 // polyline) so the corner geometry matches the rest of the face's solid fills.
-// Three Z's stack diagonally up-and-right, growing in size — classic cartoon
-// sleep convention.
+// Two Z's only — at the in-game raster size (~54 px wide) a third Z dissolves
+// into the line work and just adds noise. Big-then-small reads clearly.
 function sleepZ() {
-    // One Z = parallelogram(top bar) + diagonal + parallelogram(bottom bar),
-    // built as a single filled path for crisp corners.
+    // Z = top bar + diagonal + bottom bar, as a single filled path.
     const z = (cx, cy, s, rot = -8) => {
-        const t = s * 0.32  // bar thickness
-        // Points: outer rectangle of the Z's bounding box has half-side s.
-        // Top bar runs along y = -s, bottom bar along y = +s, diagonal connects
-        // top-left of the bottom bar to bottom-right of the top bar.
+        const t = s * 0.34  // bar thickness ratio
         const d = [
             `M ${-s} ${-s}`,
             `L ${s} ${-s}`,
             `L ${s} ${-s + t}`,
-            `L ${-s + t * 1.6} ${s - t}`,
+            `L ${-s + t * 1.5} ${s - t}`,
             `L ${s} ${s - t}`,
             `L ${s} ${s}`,
             `L ${-s} ${s}`,
             `L ${-s} ${s - t}`,
-            `L ${s - t * 1.6} ${-s + t}`,
+            `L ${s - t * 1.5} ${-s + t}`,
             `L ${-s} ${-s + t}`,
             `Z`,
         ].join(' ')
         return `<path d="${d}" fill="black" transform="translate(${cx} ${cy}) rotate(${rot})"/>`
     }
-    return [z(228, 26, 20), z(202, 62, 14), z(184, 90, 9)].join('\n')
+    // Big Z up top-right; smaller Z below-left of it. Both sit above the
+    // closed-eye band (which is at y≈80) so they don't overlap the eyes.
+    return [z(218, 30, 28), z(168, 60, 18)].join('\n')
 }
 
 // Compose a face SVG. Width/height match the face.svg display sizing (54×63).
@@ -173,36 +202,58 @@ ${extras}
 
 // ============ OUTPUT SET ============
 const variants = [
+    // Smile progression — flat → small → medium → open → full laugh.
     { name: 'smile_0_closed', eyes: eyesOpen(), mouth: mouthClosedNeutral() },
     { name: 'smile_1_small', eyes: eyesOpen(), mouth: mouthSmileSmall() },
     { name: 'smile_2_medium', eyes: eyesOpen(), mouth: mouthSmileMedium() },
     { name: 'smile_3_open', eyes: eyesOpen(), mouth: mouthSmileOpen() },
     { name: 'smile_4_laugh', eyes: eyesOpen(), mouth: mouthLaugh() },
+    // Eye states (blink, sleep, wink).
     { name: 'closed', eyes: eyesClosedHappy(), mouth: mouthClosedNeutral() },
     { name: 'sleeping', eyes: eyesSleeping(), mouth: mouthTiny(), extras: sleepZ() },
+    { name: 'wink', eyes: eyesWinkRight(), mouth: mouthSmileMedium() },
+    // Negative-emotion mouths.
+    { name: 'frown_small', eyes: eyesOpen(), mouth: mouthFrownSmall() },
+    { name: 'frown_big', eyes: eyesOpen(), mouth: mouthFrownBig() },
+    // Surprise / speechless ("oh") — keeps open eyes (the held/dragging state
+    // already uses face_surprised.svg for the *grabbed* surprise).
+    { name: 'oh', eyes: eyesOpen(), mouth: mouthOh() },
 ]
 
-// Build a preview HTML page that shows the original face.svg next to every
-// generated variant. Used by probe_faces.mjs to take a single screenshot.
+// Brand-source SVGs in parts/ (dropped in by the user) used as the style
+// reference. Listed manually because not every file in parts/ is a face.
+const BRAND_SOURCES = [
+    'face.svg', 'face_surprised.svg', 'sleepy.svg',
+    'Cheers.svg', 'Curious.svg', 'Excited.svg', 'Neutral.svg', 'Surprise.svg',
+    'Talking.svg', 'Toughtful.svg', 'Whistling.svg', 'Winking.svg',
+]
+
+// Build a preview HTML page that shows the brand reference row above the
+// generated row, so the styles can be compared at a glance.
 function previewHtml(variants) {
-    const cells = [
-        `<div class="cell"><img src="/parts/face.svg"/><div class="lab">original (face.svg)</div></div>`,
-        ...variants.map(
-            (v) => `<div class="cell"><img src="/parts/generated/${v.name}.svg"/><div class="lab">${v.name}</div></div>`,
-        ),
-    ].join('\n')
+    const sourceCells = BRAND_SOURCES.map(
+        (f) => `<div class="cell src"><img src="/parts/${f}"/><div class="lab">${f}</div></div>`,
+    ).join('\n')
+    const genCells = variants.map(
+        (v) => `<div class="cell gen"><img src="/parts/generated/${v.name}.svg"/><div class="lab">${v.name}</div></div>`,
+    ).join('\n')
     return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>face preview</title>
 <style>
   body { margin:0; padding:24px; background:#EFE4FF; font-family:system-ui,sans-serif; }
-  .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; }
-  .cell { background:#FFCA05; border:3px solid #000; border-radius:24px; padding:20px;
-          display:flex; flex-direction:column; align-items:center; gap:8px; }
-  .cell img { width:160px; height:auto; image-rendering: -webkit-optimize-contrast; }
-  .lab { font-size:13px; font-weight:600; }
+  h2 { margin: 16px 0 8px; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.6; }
+  .grid { display:grid; grid-template-columns: repeat(6, 1fr); gap:12px; }
+  .cell { background:#FFCA05; border:3px solid #000; border-radius:18px; padding:12px;
+          display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .cell img { width:130px; height:130px; object-fit: contain; image-rendering: -webkit-optimize-contrast; }
+  .lab { font-size:11px; font-weight:600; text-align:center; }
+  .src { background: #FFE995; }
+  .gen { background: #FFCA05; }
 </style></head><body>
-<div class="grid">
-${cells}
-</div></body></html>
+<h2>brand sources (reference)</h2>
+<div class="grid">${sourceCells}</div>
+<h2>generated variants</h2>
+<div class="grid">${genCells}</div>
+</body></html>
 `
 }
 

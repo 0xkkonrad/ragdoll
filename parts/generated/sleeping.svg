@@ -1,8 +1,7 @@
 <svg width="54" height="63" viewBox="0 0 252 295" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M14 80 Q 65 110 116 80" stroke="black" stroke-width="14" fill="none" stroke-linecap="round"/>
 <path d="M136 80 Q 187 110 238 80" stroke="black" stroke-width="14" fill="none" stroke-linecap="round"/>
-<path d="M102 235 Q 126 246 150 235" stroke="black" stroke-width="12" fill="none" stroke-linecap="round"/>
-<path d="M -20 -20 L 20 -20 L 20 -13.6 L -9.759999999999998 13.6 L 20 13.6 L 20 20 L -20 20 L -20 13.6 L 9.759999999999998 -13.6 L -20 -13.6 Z" fill="black" transform="translate(228 26) rotate(-8)"/>
-<path d="M -14 -14 L 14 -14 L 14 -9.52 L -6.831999999999999 9.52 L 14 9.52 L 14 14 L -14 14 L -14 9.52 L 6.831999999999999 -9.52 L -14 -9.52 Z" fill="black" transform="translate(202 62) rotate(-8)"/>
-<path d="M -9 -9 L 9 -9 L 9 -6.12 L -4.392 6.12 L 9 6.12 L 9 9 L -9 9 L -9 6.12 L 4.392 -6.12 L -9 -6.12 Z" fill="black" transform="translate(184 90) rotate(-8)"/>
+<path d="M99 235 Q 126 247 153 235" stroke="black" stroke-width="13" fill="none" stroke-linecap="round"/>
+<path d="M -28 -28 L 28 -28 L 28 -18.479999999999997 L -13.719999999999999 18.479999999999997 L 28 18.479999999999997 L 28 28 L -28 28 L -28 18.479999999999997 L 13.719999999999999 -18.479999999999997 L -28 -18.479999999999997 Z" fill="black" transform="translate(218 30) rotate(-8)"/>
+<path d="M -18 -18 L 18 -18 L 18 -11.879999999999999 L -8.82 11.879999999999999 L 18 11.879999999999999 L 18 18 L -18 18 L -18 11.879999999999999 L 8.82 -11.879999999999999 L -18 -11.879999999999999 Z" fill="black" transform="translate(168 60) rotate(-8)"/>
 </svg>

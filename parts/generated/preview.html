@@ -1,19 +1,38 @@
 <!DOCTYPE html><html><head><meta charset="utf-8"/><title>face preview</title>
 <style>
   body { margin:0; padding:24px; background:#EFE4FF; font-family:system-ui,sans-serif; }
-  .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; }
-  .cell { background:#FFCA05; border:3px solid #000; border-radius:24px; padding:20px;
-          display:flex; flex-direction:column; align-items:center; gap:8px; }
-  .cell img { width:160px; height:auto; image-rendering: -webkit-optimize-contrast; }
-  .lab { font-size:13px; font-weight:600; }
+  h2 { margin: 16px 0 8px; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.6; }
+  .grid { display:grid; grid-template-columns: repeat(6, 1fr); gap:12px; }
+  .cell { background:#FFCA05; border:3px solid #000; border-radius:18px; padding:12px;
+          display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .cell img { width:130px; height:130px; object-fit: contain; image-rendering: -webkit-optimize-contrast; }
+  .lab { font-size:11px; font-weight:600; text-align:center; }
+  .src { background: #FFE995; }
+  .gen { background: #FFCA05; }
 </style></head><body>
-<div class="grid">
-<div class="cell"><img src="/parts/face.svg"/><div class="lab">original (face.svg)</div></div>
-<div class="cell"><img src="/parts/generated/smile_0_closed.svg"/><div class="lab">smile_0_closed</div></div>
-<div class="cell"><img src="/parts/generated/smile_1_small.svg"/><div class="lab">smile_1_small</div></div>
-<div class="cell"><img src="/parts/generated/smile_2_medium.svg"/><div class="lab">smile_2_medium</div></div>
-<div class="cell"><img src="/parts/generated/smile_3_open.svg"/><div class="lab">smile_3_open</div></div>
-<div class="cell"><img src="/parts/generated/smile_4_laugh.svg"/><div class="lab">smile_4_laugh</div></div>
-<div class="cell"><img src="/parts/generated/closed.svg"/><div class="lab">closed</div></div>
-<div class="cell"><img src="/parts/generated/sleeping.svg"/><div class="lab">sleeping</div></div>
-</div></body></html>
+<h2>brand sources (reference)</h2>
+<div class="grid"><div class="cell src"><img src="/parts/face.svg"/><div class="lab">face.svg</div></div>
+<div class="cell src"><img src="/parts/face_surprised.svg"/><div class="lab">face_surprised.svg</div></div>
+<div class="cell src"><img src="/parts/sleepy.svg"/><div class="lab">sleepy.svg</div></div>
+<div class="cell src"><img src="/parts/Cheers.svg"/><div class="lab">Cheers.svg</div></div>
+<div class="cell src"><img src="/parts/Curious.svg"/><div class="lab">Curious.svg</div></div>
+<div class="cell src"><img src="/parts/Excited.svg"/><div class="lab">Excited.svg</div></div>
+<div class="cell src"><img src="/parts/Neutral.svg"/><div class="lab">Neutral.svg</div></div>
+<div class="cell src"><img src="/parts/Surprise.svg"/><div class="lab">Surprise.svg</div></div>
+<div class="cell src"><img src="/parts/Talking.svg"/><div class="lab">Talking.svg</div></div>
+<div class="cell src"><img src="/parts/Toughtful.svg"/><div class="lab">Toughtful.svg</div></div>
+<div class="cell src"><img src="/parts/Whistling.svg"/><div class="lab">Whistling.svg</div></div>
+<div class="cell src"><img src="/parts/Winking.svg"/><div class="lab">Winking.svg</div></div></div>
+<h2>generated variants</h2>
+<div class="grid"><div class="cell gen"><img src="/parts/generated/smile_0_closed.svg"/><div class="lab">smile_0_closed</div></div>
+<div class="cell gen"><img src="/parts/generated/smile_1_small.svg"/><div class="lab">smile_1_small</div></div>
+<div class="cell gen"><img src="/parts/generated/smile_2_medium.svg"/><div class="lab">smile_2_medium</div></div>
+<div class="cell gen"><img src="/parts/generated/smile_3_open.svg"/><div class="lab">smile_3_open</div></div>
+<div class="cell gen"><img src="/parts/generated/smile_4_laugh.svg"/><div class="lab">smile_4_laugh</div></div>
+<div class="cell gen"><img src="/parts/generated/closed.svg"/><div class="lab">closed</div></div>
+<div class="cell gen"><img src="/parts/generated/sleeping.svg"/><div class="lab">sleeping</div></div>
+<div class="cell gen"><img src="/parts/generated/wink.svg"/><div class="lab">wink</div></div>
+<div class="cell gen"><img src="/parts/generated/frown_small.svg"/><div class="lab">frown_small</div></div>
+<div class="cell gen"><img src="/parts/generated/frown_big.svg"/><div class="lab">frown_big</div></div>
+<div class="cell gen"><img src="/parts/generated/oh.svg"/><div class="lab">oh</div></div></div>
+</body></html>
