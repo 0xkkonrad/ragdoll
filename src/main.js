@@ -6,6 +6,7 @@ import legUrl from '/parts/leg.svg?url'
 import handUrl from '/parts/hand.svg?url'
 import footUrl from '/parts/foot.svg?url'
 import faceUrl from '/parts/face.svg?url'
+import faceSurprisedUrl from '/parts/face_surprised.svg?url'
 
 const SVG_PX_PER_UNIT = 100
 
@@ -64,7 +65,16 @@ const sprites = {
     hand: await loadImage(handUrl),
     foot: await loadImage(footUrl),
     face: await loadImage(faceUrl),
+    faceSurprised: await loadImage(faceSurprisedUrl),
 }
+
+// Bobble-inertia state for the face: an angle (and angular velocity) that
+// trails shell.angle via a damped spring, so the face wobbles after the body
+// turns. Reset on world rebuild so we don't keep momentum across resets.
+let faceAngle = 0
+let faceAngularVel = 0
+const FACE_STIFF = 200   // ω² — natural freq ~2.25 Hz
+const FACE_DAMP = 14     // 2ζω — ζ ≈ 0.5
 
 // Face overlay drawn on top of the shell, in shell-local SVG-px.
 // (y is SVG y-down; negative oy = up). Tunable at runtime via
@@ -270,6 +280,8 @@ function buildWorld() {
     world.addBody(ground)
 
     parts = { shell, ground }
+    faceAngle = shell.angle
+    faceAngularVel = 0
 }
 
 function drawSprite(body) {
@@ -291,15 +303,24 @@ function drawSprite(body) {
 }
 
 function drawFace() {
-    const img = sprites.face
     const shell = parts.shell
+    // Held = surprised. Otherwise the default Cheers face.
+    const img = (dragging || mouseConstraint) ? sprites.faceSurprised : sprites.face
     ctx.save()
     const s = worldToScreen(shell.position[0], shell.position[1])
     ctx.translate(s.x, s.y)
+    // Anchor (faceCfg.ox/oy) rotates with the shell so the face stays glued
+    // to the upper lobe. The face *image* then rotates by the bobble lag
+    // (faceAngle - shell.angle) for the wobble effect.
     ctx.rotate(-shell.angle)
     const scale = pixelsPerUnit / SVG_PX_PER_UNIT
     ctx.scale(scale, scale)
-    ctx.drawImage(img, -faceCfg.w / 2 + faceCfg.ox, -faceCfg.h / 2 + faceCfg.oy, faceCfg.w, faceCfg.h)
+    ctx.translate(faceCfg.ox, faceCfg.oy)
+    ctx.rotate(-(faceAngle - shell.angle))
+    // Preserve each sprite's own aspect ratio off faceCfg.w as the size knob.
+    const w = faceCfg.w
+    const h = w * (img.height / img.width)
+    ctx.drawImage(img, -w / 2, -h / 2, w, h)
     ctx.restore()
 }
 
@@ -400,8 +421,16 @@ function loop(t) {
     const dt = Math.min((t - lastT) / 1000, 1 / 30)
     lastT = t
     if (!paused && !frozen) world.step(1 / 60, dt, 6)
+    updateFaceBobble(dt)
     render()
     requestAnimationFrame(loop)
+}
+
+function updateFaceBobble(dt) {
+    const target = parts.shell.angle
+    const a = (target - faceAngle) * FACE_STIFF - faceAngularVel * FACE_DAMP
+    faceAngularVel += a * dt
+    faceAngle += faceAngularVel * dt
 }
 window.__ragdoll = {
     pause: () => { paused = true },
