@@ -1,0 +1,19 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"/><title>face preview</title>
+<style>
+  body { margin:0; padding:24px; background:#EFE4FF; font-family:system-ui,sans-serif; }
+  .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; }
+  .cell { background:#FFCA05; border:3px solid #000; border-radius:24px; padding:20px;
+          display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .cell img { width:160px; height:auto; image-rendering: -webkit-optimize-contrast; }
+  .lab { font-size:13px; font-weight:600; }
+</style></head><body>
+<div class="grid">
+<div class="cell"><img src="/parts/face.svg"/><div class="lab">original (face.svg)</div></div>
+<div class="cell"><img src="/parts/generated/smile_0_closed.svg"/><div class="lab">smile_0_closed</div></div>
+<div class="cell"><img src="/parts/generated/smile_1_small.svg"/><div class="lab">smile_1_small</div></div>
+<div class="cell"><img src="/parts/generated/smile_2_medium.svg"/><div class="lab">smile_2_medium</div></div>
+<div class="cell"><img src="/parts/generated/smile_3_open.svg"/><div class="lab">smile_3_open</div></div>
+<div class="cell"><img src="/parts/generated/smile_4_laugh.svg"/><div class="lab">smile_4_laugh</div></div>
+<div class="cell"><img src="/parts/generated/closed.svg"/><div class="lab">closed</div></div>
+<div class="cell"><img src="/parts/generated/sleeping.svg"/><div class="lab">sleeping</div></div>
+</div></body></html>

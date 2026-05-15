@@ -7,6 +7,7 @@ import handUrl from '/parts/hand.svg?url'
 import footUrl from '/parts/foot.svg?url'
 import faceUrl from '/parts/face.svg?url'
 import faceSurprisedUrl from '/parts/face_surprised.svg?url'
+import faceSleepyUrl from '/parts/sleepy.svg?url'
 
 const SVG_PX_PER_UNIT = 100
 
@@ -35,7 +36,12 @@ const tune = {
     HAND_FLIPX: false,
     HAND_FLIPY: false,
     DEBUG: false,
+    SLEEPY: true,    // swap to sleepy.svg face after a few seconds of rest
 }
+
+// Seconds the body must stay still before the face goes sleepy.
+const SLEEPY_AFTER = 2.5
+let restTime = 0
 const deg2rad = (d) => (d * Math.PI) / 180
 
 const BODYPARTS = 1 << 2
@@ -66,6 +72,7 @@ const sprites = {
     foot: await loadImage(footUrl),
     face: await loadImage(faceUrl),
     faceSurprised: await loadImage(faceSurprisedUrl),
+    faceSleepy: await loadImage(faceSleepyUrl),
 }
 
 // Bobble-inertia state for the face: an angle (and angular velocity) that
@@ -282,6 +289,7 @@ function buildWorld() {
     parts = { shell, ground }
     faceAngle = shell.angle
     faceAngularVel = 0
+    restTime = 0
 }
 
 function drawSprite(body) {
@@ -304,8 +312,11 @@ function drawSprite(body) {
 
 function drawFace() {
     const shell = parts.shell
-    // Held = surprised. Otherwise the default Cheers face.
-    const img = (dragging || mouseConstraint) ? sprites.faceSurprised : sprites.face
+    // Face picker: held > sleepy > default. Sleepy is gated by tune.SLEEPY
+    // so it can be turned off live if it doesn't read well.
+    let img = sprites.face
+    if (dragging || mouseConstraint) img = sprites.faceSurprised
+    else if (tune.SLEEPY && restTime >= SLEEPY_AFTER) img = sprites.faceSleepy
     ctx.save()
     const s = worldToScreen(shell.position[0], shell.position[1])
     ctx.translate(s.x, s.y)
@@ -422,6 +433,7 @@ function loop(t) {
     lastT = t
     if (!paused && !frozen) world.step(1 / 60, dt, 6)
     updateFaceBobble(dt)
+    updateRest(dt)
     render()
     requestAnimationFrame(loop)
 }
@@ -431,6 +443,16 @@ function updateFaceBobble(dt) {
     const a = (target - faceAngle) * FACE_STIFF - faceAngularVel * FACE_DAMP
     faceAngularVel += a * dt
     faceAngle += faceAngularVel * dt
+}
+
+function updateRest(dt) {
+    const shell = parts.shell
+    const v = Math.hypot(shell.velocity[0], shell.velocity[1])
+    const w = Math.abs(shell.angularVelocity)
+    // "Still" = low linear + angular velocity and the player isn't holding it.
+    const still = v < 0.05 && w < 0.1 && !mouseConstraint
+    if (still) restTime += dt
+    else restTime = 0
 }
 window.__ragdoll = {
     pause: () => { paused = true },
@@ -456,7 +478,7 @@ window.__ragdoll = {
     tune,
     setTune: (patch) => {
         Object.assign(tune, patch)
-        const renderOnly = new Set(['DEBUG'])
+        const renderOnly = new Set(['DEBUG', 'SLEEPY'])
         if (Object.keys(patch).every((k) => renderOnly.has(k))) return
         buildWorld()
     },
