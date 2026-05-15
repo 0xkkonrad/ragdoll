@@ -1,0 +1,12 @@
+import { chromium } from 'playwright'
+const browser = await chromium.launch()
+const ctx = await browser.newContext({ viewport: { width: 700, height: 600 } })
+const page = await ctx.newPage()
+page.on('pageerror', e => console.log('PAGEERROR:', e.message))
+await page.goto('http://localhost:5173/?t=' + Date.now(), { waitUntil: 'networkidle' })
+await page.waitForTimeout(120)
+await page.evaluate(() => window.__ragdoll.pause())
+await page.waitForTimeout(50)
+await page.evaluate(() => { const t = document.getElementById('tune'); if (t) t.style.display = 'none' })
+await page.screenshot({ path: '/tmp/peanut-paused.png', clip: { x: 150, y: 0, width: 450, height: 400 } })
+await browser.close()
