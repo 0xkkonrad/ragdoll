@@ -132,6 +132,16 @@ function makeEndCap({ position, radius, sprite, mass = 0.3 }) {
 }
 
 function buildWorld() {
+    // Detach the mouse-drag singletons from the previous world before we
+    // replace it — otherwise `mouseBody.world` still points at the old world
+    // and the next addBody throws "Body is already added to a World".
+    if (world) {
+        if (mouseConstraint) world.removeConstraint(mouseConstraint)
+        if (mouseBody.world === world) world.removeBody(mouseBody)
+    }
+    mouseConstraint = null
+    dragging = false
+
     const { ARM_L, LEG_L, SHOULDER_X, HIP_X } = tune
     const SHOULDER_LIMIT = deg2rad(tune.SHOULDER_DEG)
     const HIP_LIMIT = deg2rad(tune.HIP_DEG)
@@ -252,7 +262,7 @@ function buildWorld() {
     addRev(leftLeg, leftFoot, [0, -LEG_L / 2], [FOOT_PIVOT_X, 0], -ANKLE_LIMIT, ANKLE_LIMIT)
     addRev(rightLeg, rightFoot, [0, -LEG_L / 2], [FOOT_PIVOT_X, 0], -ANKLE_LIMIT, ANKLE_LIMIT)
 
-    const ground = new p2.Body({ position: [0, -1.5] })
+    const ground = new p2.Body({ position: [0, -3.0] })
     const plane = new p2.Plane()
     plane.collisionGroup = GROUND
     plane.collisionMask = BODYPARTS
