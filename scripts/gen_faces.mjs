@@ -88,12 +88,27 @@ function eyesWinkRight() {
 }
 
 // ============ MOUTH VARIANTS ============
-// All mouths sit inside a "smile band" roughly y=180..280, x=18..235 in
+// All mouths sit inside a "smile band" roughly y=180..295, x=18..235 in
 // viewBox-units. Stroke matches the eye stroke for consistency.
-
-// All mouths are centered horizontally around x≈126 and sit in the lower
-// third of the face (y≈210..280) — the same band the Cheers original uses.
 const SW = 14  // shared stroke width, matches the brand-stroke calibration in parts/README.md
+
+// Brand mouth-corner "lip C" dimples — modeled on Talking.svg's pink paths
+// 10/11. Two tiny crescents tucked INSIDE the bottom corners of an open mouth
+// (they sit at the corners of the red tongue/lower-lip area, not on the
+// outside of the face).
+function lipCorners(scale = 1, mouthCx = 126, mouthCy = 245) {
+    const s = (n) => mouthCx + (n - mouthCx) * scale
+    const sy = (n) => mouthCy + (n - mouthCy) * scale
+    // Left corner: small leftward-pointing crescent. Talking.svg uses bbox
+    // ≈(82, 232) → (104, 240): wedge slanting up-right.
+    const left = `M ${s(82)} ${sy(258)} C ${s(88)} ${sy(248)}, ${s(100)} ${sy(250)}, ${s(108)} ${sy(258)} C ${s(102)} ${sy(266)}, ${s(90)} ${sy(266)}, ${s(82)} ${sy(258)} Z`
+    // Right corner: mirror.
+    const right = `M ${s(144)} ${sy(258)} C ${s(152)} ${sy(250)}, ${s(164)} ${sy(248)}, ${s(170)} ${sy(258)} C ${s(162)} ${sy(266)}, ${s(150)} ${sy(266)}, ${s(144)} ${sy(258)} Z`
+    return [
+        `<path d="${left}" fill="${PINK}"/>`,
+        `<path d="${right}" fill="${PINK}"/>`,
+    ].join('\n')
+}
 
 // Stage 0 — fully closed neutral: a single near-flat curve.
 function mouthClosedNeutral() {
@@ -110,30 +125,82 @@ function mouthSmileMedium() {
     return `<path d="M52 218 Q 126 282 200 218" stroke="black" stroke-width="${SW}" fill="none" stroke-linecap="round"/>`
 }
 
-// Stage 3 — mouth open, visibly grinning. Black "banana" outer with a fat
-// cream-white tooth band at top and a thick red tongue/lower lip filling out
-// the bottom — mirrors the layered fill order used in the Cheers original.
-function mouthSmileOpen() {
+// Brand mouth silhouette — wide and squat, with corners that flick UP
+// (like a smile-with-attitude), a gentle dip in the middle of the top edge,
+// and a deep U bottom. This matches the topology used by Cheers / Talking /
+// Surprise (which all share the same wide horizontal mouth at the bottom of
+// the face). Returns just the outline; the inner cutout is a separate path.
+//
+// `scale` (0..1) shrinks the mouth around its center for stage-3 vs stage-4.
+function brandMouthOutline(scale = 1) {
+    const cx = 126, cy = 245
+    const sx = (n) => cx + (n - cx) * scale
+    const sy = (n) => cy + (n - cy) * scale
+    // Mouth box (at scale=1): x: 22..230 (width ~208), y: 200..292 (height ~92).
     return [
-        `<path d="M40 200 Q 126 296 212 200 Q 126 268 40 200 Z" fill="black"/>`,
-        // cream-white teeth band (sits inside the outer banana)
-        `<path d="M58 213 Q 126 248 194 213 Q 126 238 58 213 Z" fill="${CREAM}"/>`,
-        // red tongue (lower crescent)
-        `<path d="M70 240 Q 126 292 182 240 Q 126 270 70 240 Z" fill="${RED}"/>`,
+        // Start at upper-LEFT corner flick. Curls up and to the left.
+        `M ${sx(22)} ${sy(215)}`,
+        `C ${sx(18)} ${sy(202)}, ${sx(35)} ${sy(195)}, ${sx(52)} ${sy(200)}`,    // left curl-up flick
+        // Top edge: gentle wave with a soft dip in the middle.
+        `C ${sx(82)} ${sy(208)}, ${sx(120)} ${sy(212)}, ${sx(126)} ${sy(212)}`,  // toward center
+        `C ${sx(132)} ${sy(212)}, ${sx(170)} ${sy(208)}, ${sx(200)} ${sy(200)}`, // center → right
+        // Right corner flick (mirrors the left).
+        `C ${sx(217)} ${sy(195)}, ${sx(234)} ${sy(202)}, ${sx(230)} ${sy(215)}`,
+        // Right outer edge curving down.
+        `C ${sx(228)} ${sy(232)}, ${sx(218)} ${sy(262)}, ${sx(196)} ${sy(280)}`,
+        // Deep U across the bottom.
+        `C ${sx(170)} ${sy(290)}, ${sx(140)} ${sy(292)}, ${sx(126)} ${sy(292)}`,
+        `C ${sx(112)} ${sy(292)}, ${sx(82)} ${sy(290)}, ${sx(56)} ${sy(280)}`,
+        // Left outer edge curving back up to start.
+        `C ${sx(34)} ${sy(262)}, ${sx(24)} ${sy(232)}, ${sx(22)} ${sy(215)}`,
+        `Z`,
+    ].join(' ')
+}
+
+// Inner cutout that defines the visible interior. Inset from the outline so
+// the black reads as a uniform rim.
+function brandMouthInner(scale = 1) {
+    const cx = 126, cy = 245
+    const sx = (n) => cx + (n - cx) * scale
+    const sy = (n) => cy + (n - cy) * scale
+    return [
+        `M ${sx(52)} ${sy(220)}`,
+        `C ${sx(82)} ${sy(228)}, ${sx(170)} ${sy(228)}, ${sx(200)} ${sy(220)}`,
+        `C ${sx(208)} ${sy(245)}, ${sx(186)} ${sy(272)}, ${sx(150)} ${sy(280)}`,
+        `C ${sx(135)} ${sy(283)}, ${sx(117)} ${sy(283)}, ${sx(102)} ${sy(280)}`,
+        `C ${sx(66)} ${sy(272)}, ${sx(44)} ${sy(245)}, ${sx(52)} ${sy(220)}`,
+        `Z`,
+    ].join(' ')
+}
+
+// Stage 3 — medium-open mouth. Smaller version of the brand silhouette with
+// cream teeth on top and red tongue on the bottom, plus the pink lip-corner
+// dimples that give the brand its "cheeky" reading.
+function mouthSmileOpen() {
+    const SC = 0.82
+    return [
+        // Outer outline + inner cutout, drawn as a single even-odd path so the
+        // black reads as a ring (matches Cheers/Talking topology).
+        `<path fill-rule="evenodd" d="${brandMouthOutline(SC)} ${brandMouthInner(SC)}" fill="black"/>`,
+        // Cream teeth band: fills the TOP half of the interior.
+        `<path d="M ${75} ${228} C ${100} ${236}, ${152} ${236}, ${177} ${228} C ${170} ${248}, ${152} ${256}, ${126} ${256} C ${100} ${256}, ${82} ${248}, ${75} ${228} Z" fill="${CREAM}"/>`,
+        // Red tongue/lower-lip sliver: fills the BOTTOM half.
+        `<path d="M ${82} ${258} C ${100} ${268}, ${152} ${268}, ${170} ${258} C ${160} ${275}, ${140} ${281}, ${126} ${281} C ${112} ${281}, ${92} ${275}, ${82} ${258} Z" fill="${RED}"/>`,
+        // Pink lip-corner dimples (the "C" cheeks).
+        lipCorners(SC),
     ].join('\n')
 }
 
-// Stage 4 — full open laugh. Larger version of stage 3, with a pink upper-lip
-// echo (à la the brand's Surprised face) to add a third color band.
+// Stage 4 — full open laugh. Same brand silhouette at full scale.
 function mouthLaugh() {
     return [
-        `<path d="M26 192 Q 126 308 226 192 Q 126 278 26 192 Z" fill="black"/>`,
-        // teeth
-        `<path d="M48 207 Q 126 248 204 207 Q 126 237 48 207 Z" fill="${CREAM}"/>`,
-        // pink interior highlight just below teeth
-        `<path d="M62 230 Q 126 263 190 230 Q 126 252 62 230 Z" fill="${PINK}"/>`,
-        // tongue
-        `<path d="M70 244 Q 126 295 182 244 Q 126 274 70 244 Z" fill="${RED}"/>`,
+        `<path fill-rule="evenodd" d="${brandMouthOutline()} ${brandMouthInner()}" fill="black"/>`,
+        // Cream teeth band, taking the full upper half of the interior.
+        `<path d="M 68 218 C 100 230, 152 230, 184 218 C 178 248, 158 262, 126 262 C 94 262, 74 248, 68 218 Z" fill="${CREAM}"/>`,
+        // Red tongue / lower lip.
+        `<path d="M 78 260 C 100 274, 152 274, 174 260 C 162 286, 138 294, 126 294 C 114 294, 90 286, 78 260 Z" fill="${RED}"/>`,
+        // Pink lip-corner dimples.
+        lipCorners(),
     ].join('\n')
 }
 
@@ -153,12 +220,22 @@ function mouthFrownBig() {
     return `<path d="M55 268 Q 126 195 197 268" stroke="black" stroke-width="${SW}" fill="none" stroke-linecap="round"/>`
 }
 
-// "O" / surprise mouth — small round black oval, separate from the eye change.
-// Useful as a "speechless" reaction independent of the held/surprised swap.
+// "O" / surprise mouth — same topology as Excited.svg's mouth: a thick black
+// ring (a single filled path with an outer + inner contour, even-odd fill) and
+// a red interior centered inside it. No offset between black and red — the
+// previous implementation drew the red shifted down, which read as a drop
+// shadow rather than a brand-style mouth.
 function mouthOh() {
+    const cx = 126, cy = 244
+    const rxO = 22, ryO = 26    // outer outline ellipse
+    const rxI = 16, ryI = 19    // inner contour — gap = ~6 px ring thickness
+    const rxR = 13, ryR = 15    // red interior — slightly inside the inner
+    // Two-subpath even-odd path: outer ring + inner ring → solid black donut.
+    const ellipsePath = (rx, ry) =>
+        `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z`
     return [
-        `<ellipse cx="126" cy="235" rx="22" ry="26" fill="black"/>`,
-        `<ellipse cx="126" cy="240" rx="14" ry="16" fill="${RED}"/>`,
+        `<path fill-rule="evenodd" d="${ellipsePath(rxO, ryO)} ${ellipsePath(rxI, ryI)}" fill="black"/>`,
+        `<ellipse cx="${cx}" cy="${cy}" rx="${rxR}" ry="${ryR}" fill="${RED}"/>`,
     ].join('\n')
 }
 
@@ -228,8 +305,10 @@ const BRAND_SOURCES = [
     'Talking.svg', 'Toughtful.svg', 'Whistling.svg', 'Winking.svg',
 ]
 
-// Build a preview HTML page that shows the brand reference row above the
-// generated row, so the styles can be compared at a glance.
+// Build a preview HTML page that shows the brand reference row, the generated
+// SVG row, and the rasterized PNG row (../generated-png/) so all three can be
+// compared at a glance. PNG cells display broken-image icons until
+// scripts/gen_pngs.mjs has run.
 function previewHtml(variants) {
     // Relative paths so the file opens correctly over file:// / UNC as well as via the dev server.
     const sourceCells = BRAND_SOURCES.map(
@@ -237,6 +316,9 @@ function previewHtml(variants) {
     ).join('\n')
     const genCells = variants.map(
         (v) => `<div class="cell gen"><img src="./${v.name}.svg"/><div class="lab">${v.name}</div></div>`,
+    ).join('\n')
+    const pngCells = variants.map(
+        (v) => `<div class="cell png"><img src="../generated-png/${v.name}.png"/><div class="lab">${v.name}.png</div></div>`,
     ).join('\n')
     return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>face preview</title>
 <style>
@@ -249,11 +331,14 @@ function previewHtml(variants) {
   .lab { font-size:11px; font-weight:600; text-align:center; }
   .src { background: #FFE995; }
   .gen { background: #FFCA05; }
+  .png { background: #FFD84A; }
 </style></head><body>
 <h2>brand sources (reference)</h2>
 <div class="grid">${sourceCells}</div>
-<h2>generated variants</h2>
+<h2>generated variants — SVG</h2>
 <div class="grid">${genCells}</div>
+<h2>generated variants — PNG (rasterized)</h2>
+<div class="grid">${pngCells}</div>
 </body></html>
 `
 }

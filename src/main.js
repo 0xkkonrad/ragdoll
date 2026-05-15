@@ -42,21 +42,123 @@ const tune = {
     SLEEPY: true,    // swap to sleepy.svg face after a few seconds of rest
 }
 
-// Rest-time face progression (seconds). The longer the ragdoll sits still,
-// the further the face drifts through an "idle personality" arc.
-//   0           → Cheers (default)
-//   THOUGHTFUL  → Thoughtful (with periodic Winking blinks)
-//   WHISTLING   → Whistling
-//   SLEEPY      → Sleepy
-// Master toggle is tune.SLEEPY; when false the face stays at Cheers regardless.
-const REST_THOUGHTFUL = 1.5
-const REST_WHISTLING = 4.0
-const REST_SLEEPY = 7.0
-const WINK_DURATION = 0.15
+// Rest-time face state machine. The longer the ragdoll sits still, the
+// further its face drifts through an "idle personality" arc.
+//   'cheers'    — just stopped (< REST_SETTLE seconds)
+//   'idle'      — random face from a mood-weighted pool, swapped every
+//                 IDLE_DWELL seconds; periodic Winking blinks layered on top
+//   'sleep'     — Sleepy hold (SLEEP_HOLD seconds)
+//   'wake'      — brief stir between sleeps (WAKE_STIR seconds)
+//   'long_wake' — rare longer wake that drops back to an idle face
+// Master toggle is tune.SLEEPY; when false the face stays at Cheers always.
+const REST_SETTLE = 1.5
+const IDLE_DWELL_MIN = 1.5,  IDLE_DWELL_MAX = 3.0
+const SLEEP_THRESH_MIN = 6.0, SLEEP_THRESH_MAX = 9.0
+const SLEEP_HOLD_MIN = 4.0,  SLEEP_HOLD_MAX = 6.0
+const WAKE_STIR_MIN = 0.5,   WAKE_STIR_MAX = 1.5
+const LONG_WAKE_CHANCE = 0.05
+const LONG_WAKE_MIN = 2.0,   LONG_WAKE_MAX = 3.0
+const WINK_DURATION = 0.8     // hold the smug wink long enough to read
+const WINK_GAP_MIN = 1.5,    WINK_GAP_MAX = 3.0
+
+// Idle face pool with base weights. Mood seeds boost one entry per rest
+// session so successive idles don't feel identical.
+const IDLE_POOL = [
+    { name: 'faceThoughtful', weight: 30 },
+    { name: 'faceNeutral',    weight: 25 },
+    { name: 'faceWhistling',  weight: 20 },
+    { name: 'faceCurious',    weight: 15 },
+    { name: 'face',           weight:  7 },  // Cheers
+    { name: 'faceTalking',    weight:  2 },
+    { name: 'faceExcited',    weight:  1 },
+]
+const WAKE_POOL = ['faceCurious', 'faceNeutral', 'faceTalking']
+
 let restTime = 0
-// Wink scheduling, both measured in restTime seconds (same clock).
+let restPhase = 'cheers'     // see comment above for values
+let phaseUntil = 0            // restTime at which the current phase ends
+let phaseFace = null          // sprite-key string for the current phase
+let sleepThreshold = 0        // restTime at which idle → sleep, per session
+let restMood = null           // { spriteKey: weightMultiplier } or null
 let nextWinkAt = 0
 let winkUntil = 0
+
+function rand(min, max) { return min + Math.random() * (max - min) }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)] }
+
+function pickIdleFace(exclude) {
+    let total = 0
+    const entries = []
+    for (const e of IDLE_POOL) {
+        if (e.name === exclude) continue
+        const mult = (restMood && restMood[e.name]) || 1
+        const w = e.weight * mult
+        if (w <= 0) continue
+        total += w
+        entries.push({ name: e.name, w })
+    }
+    let r = Math.random() * total
+    for (const e of entries) if ((r -= e.w) <= 0) return e.name
+    return entries[entries.length - 1].name
+}
+
+function rollMood() {
+    // 50% of rest sessions are unbiased; the rest pick one face to triple-weight.
+    if (Math.random() < 0.5) return null
+    const candidates = IDLE_POOL.filter(e => e.name !== 'face').map(e => e.name)
+    return { [pick(candidates)]: 3 }
+}
+
+function resetRest() {
+    restTime = 0
+    restPhase = 'cheers'
+    phaseUntil = 0
+    phaseFace = null
+    sleepThreshold = 0
+    restMood = null
+    nextWinkAt = REST_SETTLE + 1.0 + 0.5 * Math.random()
+    winkUntil = 0
+}
+
+function advanceRestPhase() {
+    if (restPhase === 'cheers') {
+        if (restTime < REST_SETTLE) return
+        restMood = rollMood()
+        phaseFace = pickIdleFace(null)
+        phaseUntil = restTime + rand(IDLE_DWELL_MIN, IDLE_DWELL_MAX)
+        sleepThreshold = restTime + rand(SLEEP_THRESH_MIN, SLEEP_THRESH_MAX) - REST_SETTLE
+        restPhase = 'idle'
+        return
+    }
+    if (restPhase === 'idle') {
+        if (restTime >= sleepThreshold) {
+            restPhase = 'sleep'
+            phaseFace = 'faceSleepy'
+            phaseUntil = restTime + rand(SLEEP_HOLD_MIN, SLEEP_HOLD_MAX)
+        } else if (restTime >= phaseUntil) {
+            phaseFace = pickIdleFace(phaseFace)
+            phaseUntil = restTime + rand(IDLE_DWELL_MIN, IDLE_DWELL_MAX)
+        }
+        return
+    }
+    if (restPhase === 'sleep' && restTime >= phaseUntil) {
+        if (Math.random() < LONG_WAKE_CHANCE) {
+            restPhase = 'long_wake'
+            phaseFace = pickIdleFace('faceSleepy')
+            phaseUntil = restTime + rand(LONG_WAKE_MIN, LONG_WAKE_MAX)
+        } else {
+            restPhase = 'wake'
+            phaseFace = pick(WAKE_POOL)
+            phaseUntil = restTime + rand(WAKE_STIR_MIN, WAKE_STIR_MAX)
+        }
+        return
+    }
+    if ((restPhase === 'wake' || restPhase === 'long_wake') && restTime >= phaseUntil) {
+        restPhase = 'sleep'
+        phaseFace = 'faceSleepy'
+        phaseUntil = restTime + rand(SLEEP_HOLD_MIN, SLEEP_HOLD_MAX)
+    }
+}
 const deg2rad = (d) => (d * Math.PI) / 180
 
 const BODYPARTS = 1 << 2
@@ -307,9 +409,7 @@ function buildWorld() {
     parts = { shell, ground }
     faceAngle = shell.angle
     faceAngularVel = 0
-    restTime = 0
-    nextWinkAt = REST_THOUGHTFUL + 1.0 + 0.5 * Math.random()
-    winkUntil = 0
+    resetRest()
 }
 
 function drawSprite(body) {
@@ -335,19 +435,19 @@ function chooseFace() {
     if (dragging || mouseConstraint) return sprites.faceSurprised
     // Master toggle: when off, never leave the default face.
     if (!tune.SLEEPY) return sprites.face
-    if (restTime >= REST_SLEEPY) return sprites.faceSleepy
-    if (restTime >= REST_WHISTLING) return sprites.faceWhistling
-    if (restTime >= REST_THOUGHTFUL) {
-        // Thoughtful with occasional ~150ms wink blinks (every 1.5–3s).
+    if (restPhase === 'cheers') return sprites.face
+    // Wink blinks only fire during the 'idle' phase. The wink override sits
+    // on top of whatever idle face is current — when it ends we fall back to
+    // phaseFace, which may have swapped underneath.
+    if (restPhase === 'idle') {
         if (restTime < winkUntil) return sprites.faceWinking
         if (restTime >= nextWinkAt) {
             winkUntil = restTime + WINK_DURATION
-            nextWinkAt = winkUntil + 1.5 + 1.5 * Math.random()
+            nextWinkAt = winkUntil + rand(WINK_GAP_MIN, WINK_GAP_MAX)
             return sprites.faceWinking
         }
-        return sprites.faceThoughtful
     }
-    return sprites.face
+    return sprites[phaseFace] || sprites.face
 }
 
 function drawFace() {
@@ -489,12 +589,9 @@ function updateRest(dt) {
     const still = v < 0.05 && w < 0.1 && !mouseConstraint
     if (still) {
         restTime += dt
+        advanceRestPhase()
     } else {
-        restTime = 0
-        // Push the first wink out so it doesn't fire the instant we re-enter
-        // the thoughtful stage.
-        nextWinkAt = REST_THOUGHTFUL + 1.0 + 0.5 * Math.random()
-        winkUntil = 0
+        resetRest()
     }
 }
 window.__ragdoll = {
