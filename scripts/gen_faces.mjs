@@ -125,82 +125,44 @@ function mouthSmileMedium() {
     return `<path d="M52 218 Q 126 282 200 218" stroke="black" stroke-width="${SW}" fill="none" stroke-linecap="round"/>`
 }
 
-// Brand mouth silhouette — wide and squat, with corners that flick UP
-// (like a smile-with-attitude), a gentle dip in the middle of the top edge,
-// and a deep U bottom. This matches the topology used by Cheers / Talking /
-// Surprise (which all share the same wide horizontal mouth at the bottom of
-// the face). Returns just the outline; the inner cutout is a separate path.
-//
-// `scale` (0..1) shrinks the mouth around its center for stage-3 vs stage-4.
-function brandMouthOutline(scale = 1) {
-    const cx = 126, cy = 245
-    const sx = (n) => cx + (n - cx) * scale
-    const sy = (n) => cy + (n - cy) * scale
-    // Mouth box (at scale=1): x: 22..230 (width ~208), y: 200..292 (height ~92).
-    return [
-        // Start at upper-LEFT corner flick. Curls up and to the left.
-        `M ${sx(22)} ${sy(215)}`,
-        `C ${sx(18)} ${sy(202)}, ${sx(35)} ${sy(195)}, ${sx(52)} ${sy(200)}`,    // left curl-up flick
-        // Top edge: gentle wave with a soft dip in the middle.
-        `C ${sx(82)} ${sy(208)}, ${sx(120)} ${sy(212)}, ${sx(126)} ${sy(212)}`,  // toward center
-        `C ${sx(132)} ${sy(212)}, ${sx(170)} ${sy(208)}, ${sx(200)} ${sy(200)}`, // center → right
-        // Right corner flick (mirrors the left).
-        `C ${sx(217)} ${sy(195)}, ${sx(234)} ${sy(202)}, ${sx(230)} ${sy(215)}`,
-        // Right outer edge curving down.
-        `C ${sx(228)} ${sy(232)}, ${sx(218)} ${sy(262)}, ${sx(196)} ${sy(280)}`,
-        // Deep U across the bottom.
-        `C ${sx(170)} ${sy(290)}, ${sx(140)} ${sy(292)}, ${sx(126)} ${sy(292)}`,
-        `C ${sx(112)} ${sy(292)}, ${sx(82)} ${sy(290)}, ${sx(56)} ${sy(280)}`,
-        // Left outer edge curving back up to start.
-        `C ${sx(34)} ${sy(262)}, ${sx(24)} ${sy(232)}, ${sx(22)} ${sy(215)}`,
-        `Z`,
-    ].join(' ')
-}
+// Brand mouth paths — copied verbatim from parts/face.svg (the canonical
+// "Cheers" expression). Composing my own curves from scratch never gets the
+// corner curls and lip-mass distribution right, so I'm just inheriting the
+// path data. Same viewBox (252×295) as face.svg, so no transform is needed
+// when used at stage-4 scale; stage-3 wraps these in a `<g transform>` shrink.
+const FACE_MOUTH_OUTLINE =
+    'M177.315 178.367C180.145 175.175 185.841 175.558 188.224 179.089C189.631 180.789 189.508 183.062 189.759 185.12C190.65 189.084 193.693 192.281 197.183 194.196C204.591 198.145 214.269 197.531 221.033 192.536C223.061 191.117 224.391 188.686 226.931 188.062C230.598 186.824 234.95 189.265 235.855 193.013C236.618 195.601 235.624 198.454 233.699 200.281C226.808 207.624 216.568 211.278 206.585 211.017C206.733 222.505 204.527 233.987 200.57 244.763C195.332 259.015 186.171 272.035 173.623 280.782C165.171 286.739 155.389 290.703 145.273 292.795C137.658 294.45 129.846 294.862 122.073 295C114.625 294.563 107.147 293.733 99.9747 291.577C86.3389 287.672 74.0912 279.461 65.004 268.627C57.4969 259.693 51.9983 249.202 48.2226 238.201C45.4806 230.068 43.4722 221.65 42.6993 213.095C36.7084 213.832 30.6584 214.092 24.6331 213.699C21.1478 213.458 18.1499 210.266 18.1991 206.764C18.017 202.997 21.3103 199.486 25.1106 199.53C33.7942 199.697 43.2851 200.07 50.8611 195.12C53.9969 193.027 56.6404 189.943 57.4821 186.206C58.0532 183.087 60.8739 180.597 64.049 180.435C67.1453 180.18 70.2073 182.247 71.2066 185.16C72.2452 187.969 71.0736 190.925 70.099 193.577C68.4302 197.762 65.5504 201.347 62.2276 204.353C73.6531 211.818 86.2552 217.623 99.5563 220.84C122.54 226.331 147.178 223.497 168.779 214.156C175.085 211.469 181.105 208.169 186.954 204.613C181.445 200.419 176.901 194.53 175.681 187.6C175.11 184.497 174.849 180.769 177.315 178.367ZM173.593 227.598C154.144 235.883 132.607 239.38 111.538 237.298C99.9353 236.139 88.5639 233.103 77.7783 228.708C77.7783 230.387 77.7833 232.072 77.7685 233.757C83.5773 235.952 89.5386 237.725 95.5443 239.282C98.936 240.097 101.363 243.687 100.772 247.135C100.359 250.99 96.3024 253.947 92.4922 253.161C87.161 251.913 81.9478 250.234 76.7298 248.579C76.4738 252.125 76.0259 255.656 75.7256 259.197C83.1047 268.145 93.1666 274.869 104.371 277.982C115.196 281.057 126.68 281.204 137.771 279.657C147.602 278.213 157.27 274.859 165.422 269.103C173.5 263.46 179.84 255.558 184.187 246.766C174.42 249.63 164.496 251.963 154.528 254.011C151.156 254.87 147.351 252.852 146.233 249.556C144.742 245.961 146.932 241.443 150.659 240.338C163.989 237.288 177.551 234.69 190.271 229.543C191.108 225.781 191.709 221.969 192.088 218.134C186.156 221.719 179.968 224.882 173.593 227.598ZM57.812 218.497C59.018 225.073 60.8099 231.556 63.286 237.774C63.729 233.344 63.3943 228.88 63.5124 224.435C63.4484 223.521 63.6798 222.529 63.3057 221.675C61.499 220.58 59.6481 219.543 57.812 218.497Z'
+const FACE_MOUTH_CREAM =
+    'M173.593 227.598C179.968 224.882 186.156 221.719 192.088 218.134C191.709 221.969 191.108 225.781 190.271 229.543C177.551 234.69 163.989 237.288 150.659 240.338C146.932 241.443 144.742 245.961 146.233 249.556C147.351 252.852 151.156 254.87 154.528 254.011C164.496 251.963 174.42 249.63 184.187 246.766C179.84 255.558 173.5 263.46 165.422 269.103C157.27 274.859 147.602 278.213 137.771 279.657C126.68 281.204 115.196 281.057 104.371 277.982C93.1666 274.869 83.1047 268.145 75.7256 259.197C76.0259 255.656 76.4738 252.125 76.7298 248.579C81.9478 250.234 87.161 251.913 92.4922 253.161C96.3024 253.947 100.359 250.99 100.772 247.135C101.363 243.687 98.936 240.097 95.5443 239.282C89.5386 237.725 83.5773 235.952 77.7685 233.757C77.7833 232.072 77.7783 230.387 77.7783 228.708C88.5639 233.103 99.9353 236.139 111.538 237.298C132.607 239.38 154.144 235.883 173.593 227.598Z'
+const FACE_MOUTH_RED =
+    'M57.812 218.497C59.6481 219.543 61.499 220.58 63.3057 221.675C63.6798 222.529 63.4484 223.521 63.5124 224.435C63.3943 228.88 63.729 233.344 63.286 237.774C60.8099 231.556 59.018 225.073 57.812 218.497Z'
 
-// Inner cutout that defines the visible interior. Inset from the outline so
-// the black reads as a uniform rim.
-function brandMouthInner(scale = 1) {
-    const cx = 126, cy = 245
-    const sx = (n) => cx + (n - cx) * scale
-    const sy = (n) => cy + (n - cy) * scale
+// Stage 4 — full open laugh. Brand mouth paths verbatim + the pink lip-corner
+// dimples that read as "cheeky".
+function mouthLaugh() {
     return [
-        `M ${sx(52)} ${sy(220)}`,
-        `C ${sx(82)} ${sy(228)}, ${sx(170)} ${sy(228)}, ${sx(200)} ${sy(220)}`,
-        `C ${sx(208)} ${sy(245)}, ${sx(186)} ${sy(272)}, ${sx(150)} ${sy(280)}`,
-        `C ${sx(135)} ${sy(283)}, ${sx(117)} ${sy(283)}, ${sx(102)} ${sy(280)}`,
-        `C ${sx(66)} ${sy(272)}, ${sx(44)} ${sy(245)}, ${sx(52)} ${sy(220)}`,
-        `Z`,
-    ].join(' ')
-}
-
-// Stage 3 — medium-open mouth. Smaller version of the brand silhouette with
-// cream teeth on top and red tongue on the bottom, plus the pink lip-corner
-// dimples that give the brand its "cheeky" reading.
-function mouthSmileOpen() {
-    const SC = 0.82
-    return [
-        // Outer outline + inner cutout, drawn as a single even-odd path so the
-        // black reads as a ring (matches Cheers/Talking topology).
-        `<path fill-rule="evenodd" d="${brandMouthOutline(SC)} ${brandMouthInner(SC)}" fill="black"/>`,
-        // Cream teeth band: fills the TOP half of the interior.
-        `<path d="M ${75} ${228} C ${100} ${236}, ${152} ${236}, ${177} ${228} C ${170} ${248}, ${152} ${256}, ${126} ${256} C ${100} ${256}, ${82} ${248}, ${75} ${228} Z" fill="${CREAM}"/>`,
-        // Red tongue/lower-lip sliver: fills the BOTTOM half.
-        `<path d="M ${82} ${258} C ${100} ${268}, ${152} ${268}, ${170} ${258} C ${160} ${275}, ${140} ${281}, ${126} ${281} C ${112} ${281}, ${92} ${275}, ${82} ${258} Z" fill="${RED}"/>`,
-        // Pink lip-corner dimples (the "C" cheeks).
-        lipCorners(SC),
+        `<path d="${FACE_MOUTH_OUTLINE}" fill="black"/>`,
+        `<path d="${FACE_MOUTH_CREAM}" fill="${CREAM}"/>`,
+        `<path d="${FACE_MOUTH_RED}" fill="${RED}"/>`,
+        lipCorners(),
     ].join('\n')
 }
 
-// Stage 4 — full open laugh. Same brand silhouette at full scale.
-function mouthLaugh() {
+// Stage 3 — same brand silhouette, scaled to 0.8 around the mouth center for
+// a slightly smaller / less "open" reading. `<g transform>` shrinks the
+// inherited paths in place — much cleaner than re-tracing them.
+function mouthSmileOpen() {
+    const SC = 0.8
+    const cx = 126, cy = 235  // center of the face.svg mouth bbox
+    // Wrap brand paths in a scaling group, then layer the pink dimples on top
+    // (scaled identically so they still anchor to the bottom corners).
     return [
-        `<path fill-rule="evenodd" d="${brandMouthOutline()} ${brandMouthInner()}" fill="black"/>`,
-        // Cream teeth band, taking the full upper half of the interior.
-        `<path d="M 68 218 C 100 230, 152 230, 184 218 C 178 248, 158 262, 126 262 C 94 262, 74 248, 68 218 Z" fill="${CREAM}"/>`,
-        // Red tongue / lower lip.
-        `<path d="M 78 260 C 100 274, 152 274, 174 260 C 162 286, 138 294, 126 294 C 114 294, 90 286, 78 260 Z" fill="${RED}"/>`,
-        // Pink lip-corner dimples.
-        lipCorners(),
+        `<g transform="translate(${cx} ${cy}) scale(${SC}) translate(-${cx} -${cy})">`,
+        `  <path d="${FACE_MOUTH_OUTLINE}" fill="black"/>`,
+        `  <path d="${FACE_MOUTH_CREAM}" fill="${CREAM}"/>`,
+        `  <path d="${FACE_MOUTH_RED}" fill="${RED}"/>`,
+        `  ${lipCorners(1, 126, 245)}`,  // inside the scaled group
+        `</g>`,
     ].join('\n')
 }
 
@@ -227,9 +189,10 @@ function mouthFrownBig() {
 // shadow rather than a brand-style mouth.
 function mouthOh() {
     const cx = 126, cy = 244
-    const rxO = 22, ryO = 26    // outer outline ellipse
-    const rxI = 16, ryI = 19    // inner contour — gap = ~6 px ring thickness
-    const rxR = 13, ryR = 15    // red interior — slightly inside the inner
+    // Sized to roughly match Excited.svg's mouth (bbox ≈ 50 × 50 px on a 251×255 face).
+    const rxO = 30, ryO = 34    // outer outline ellipse
+    const rxI = 22, ryI = 26    // inner contour — gap = ~8 px ring thickness
+    const rxR = 23, ryR = 27    // red interior — slightly bigger than inner so no yellow ring shows through
     // Two-subpath even-odd path: outer ring + inner ring → solid black donut.
     const ellipsePath = (rx, ry) =>
         `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z`

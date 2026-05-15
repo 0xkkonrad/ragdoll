@@ -6,7 +6,9 @@ const URL = process.env.URL || 'http://localhost:5173/parts/generated/preview.ht
 const OUT = process.env.OUT || '/tmp/faces-preview.png'
 
 const browser = await chromium.launch()
-const ctx = await browser.newContext({ viewport: { width: 1600, height: 800 }, deviceScaleFactor: 1 })
+// 900-wide viewport keeps the screenshot ≤1000px while the 3-col grid layout
+// (via gen_faces.mjs preview) keeps each variant readably big.
+const ctx = await browser.newContext({ viewport: { width: 900, height: 1200 }, deviceScaleFactor: 1 })
 const page = await ctx.newPage()
 page.on('pageerror', (e) => console.log('PAGEERROR:', e.message))
 await page.goto(URL + '?t=' + Date.now(), { waitUntil: 'networkidle' })
