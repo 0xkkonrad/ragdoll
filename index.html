@@ -29,9 +29,28 @@
                 opacity: 0.6;
                 pointer-events: none;
             }
-            #tune {
+            #debug-toggle {
                 position: fixed;
                 top: 12px;
+                right: 12px;
+                width: 28px;
+                height: 28px;
+                padding: 0;
+                border: 1px solid rgba(0,0,0,0.15);
+                border-radius: 6px;
+                background: rgba(255,255,255,0.85);
+                color: #000;
+                font-size: 14px;
+                line-height: 1;
+                cursor: pointer;
+                z-index: 10;
+                opacity: 0.6;
+            }
+            #debug-toggle:hover { opacity: 1; }
+            #tune.hidden { display: none; }
+            #tune {
+                position: fixed;
+                top: 48px;
                 right: 12px;
                 background: rgba(255,255,255,0.85);
                 border: 1px solid rgba(0,0,0,0.15);
@@ -61,9 +80,10 @@
     </head>
     <body>
         <canvas id="stage"></canvas>
-        <div id="hud">drag the peanut · R to reset</div>
-        <div id="tune">
-            <h4>tune</h4>
+        <div id="hud">drag the peanut · R to reset · ~ for debug</div>
+        <button id="debug-toggle" title="Toggle debug panel (~)" aria-label="Toggle debug panel">⚙</button>
+        <div id="tune" class="hidden">
+            <h4>debug</h4>
             <label>ARM_L</label>
             <input type="range" data-key="ARM_L" min="0.2" max="2.0" step="0.01" value="0.705"/>
             <span class="val" data-val="ARM_L">0.71</span>
@@ -100,9 +120,9 @@
             <label>sleepy</label>
             <input type="checkbox" data-key="SLEEPY" checked/>
             <span class="val" data-val="SLEEPY">on</span>
-            <label>debug</label>
-            <input type="checkbox" data-key="DEBUG"/>
-            <span class="val" data-val="DEBUG">off</span>
+            <label>wireframes</label>
+            <input type="checkbox" data-key="WIREFRAMES"/>
+            <span class="val" data-val="WIREFRAMES">off</span>
         </div>
         <script>
             // Wire sliders → window.__ragdoll.setTune(...). Rebuilds the world.
@@ -140,6 +160,18 @@
                     }
                 }
                 init()
+            })()
+
+            // Show/hide the debug panel via the corner button or `~`.
+            (function () {
+                const panel = document.getElementById('tune')
+                const btn = document.getElementById('debug-toggle')
+                function toggle() { panel.classList.toggle('hidden') }
+                btn.addEventListener('click', toggle)
+                window.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT') return
+                    if (e.key === '`' || e.key === '~') { toggle(); e.preventDefault() }
+                })
             })()
         </script>
         <pre id="err" style="position:fixed;top:8px;left:8px;color:#900;background:#fff;padding:8px;font:12px/1.4 ui-monospace,Menlo,monospace;max-width:90vw;white-space:pre-wrap;display:none;border:1px solid #900;"></pre>

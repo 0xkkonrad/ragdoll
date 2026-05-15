@@ -38,7 +38,7 @@ const tune = {
     HAND_DEG: 20,
     HAND_FLIPX: false,
     HAND_FLIPY: false,
-    DEBUG: false,
+    WIREFRAMES: false,
     SLEEPY: true,    // swap to sleepy.svg face after a few seconds of rest
 }
 
@@ -389,7 +389,7 @@ function render() {
     }
     drawSprite(parts.shell)
     drawFace()
-    if (tune.DEBUG) drawDebug()
+    if (tune.WIREFRAMES) drawDebug()
 }
 
 function drawDebug() {
@@ -536,7 +536,7 @@ window.__ragdoll = {
     tune,
     setTune: (patch) => {
         Object.assign(tune, patch)
-        const renderOnly = new Set(['DEBUG', 'SLEEPY'])
+        const renderOnly = new Set(['WIREFRAMES', 'SLEEPY'])
         if (Object.keys(patch).every((k) => renderOnly.has(k))) return
         buildWorld()
     },

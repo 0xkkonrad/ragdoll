@@ -231,11 +231,12 @@ const BRAND_SOURCES = [
 // Build a preview HTML page that shows the brand reference row above the
 // generated row, so the styles can be compared at a glance.
 function previewHtml(variants) {
+    // Relative paths so the file opens correctly over file:// / UNC as well as via the dev server.
     const sourceCells = BRAND_SOURCES.map(
-        (f) => `<div class="cell src"><img src="/parts/${f}"/><div class="lab">${f}</div></div>`,
+        (f) => `<div class="cell src"><img src="../${f}"/><div class="lab">${f}</div></div>`,
     ).join('\n')
     const genCells = variants.map(
-        (v) => `<div class="cell gen"><img src="/parts/generated/${v.name}.svg"/><div class="lab">${v.name}</div></div>`,
+        (v) => `<div class="cell gen"><img src="./${v.name}.svg"/><div class="lab">${v.name}</div></div>`,
     ).join('\n')
     return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>face preview</title>
 <style>
