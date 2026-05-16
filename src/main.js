@@ -47,17 +47,11 @@ const tune = {
 //   'cheers'    — just stopped (< REST_SETTLE seconds)
 //   'idle'      — random face from a mood-weighted pool, swapped every
 //                 IDLE_DWELL seconds; periodic Winking blinks layered on top
-//   'sleep'     — Sleepy hold (SLEEP_HOLD seconds)
-//   'wake'      — brief stir between sleeps (WAKE_STIR seconds)
-//   'long_wake' — rare longer wake that drops back to an idle face
+//   'sleep'     — Sleepy; terminal until the player disturbs the ragdoll
 // Master toggle is tune.SLEEPY; when false the face stays at Cheers always.
 const REST_SETTLE = 1.5
 const IDLE_DWELL_MIN = 1.5,  IDLE_DWELL_MAX = 3.0
 const SLEEP_THRESH_MIN = 6.0, SLEEP_THRESH_MAX = 9.0
-const SLEEP_HOLD_MIN = 4.0,  SLEEP_HOLD_MAX = 6.0
-const WAKE_STIR_MIN = 0.5,   WAKE_STIR_MAX = 1.5
-const LONG_WAKE_CHANCE = 0.05
-const LONG_WAKE_MIN = 2.0,   LONG_WAKE_MAX = 3.0
 const WINK_DURATION = 0.8     // hold the smug wink long enough to read
 const WINK_GAP_MIN = 1.5,    WINK_GAP_MAX = 3.0
 
@@ -72,8 +66,6 @@ const IDLE_POOL = [
     { name: 'faceTalking',    weight:  2 },
     { name: 'faceExcited',    weight:  1 },
 ]
-const WAKE_POOL = ['faceCurious', 'faceNeutral', 'faceTalking']
-
 let restTime = 0
 let restPhase = 'cheers'     // see comment above for values
 let phaseUntil = 0            // restTime at which the current phase ends
@@ -84,7 +76,6 @@ let nextWinkAt = 0
 let winkUntil = 0
 
 function rand(min, max) { return min + Math.random() * (max - min) }
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 
 function pickIdleFace(exclude) {
     let total = 0
@@ -106,7 +97,7 @@ function rollMood() {
     // 50% of rest sessions are unbiased; the rest pick one face to triple-weight.
     if (Math.random() < 0.5) return null
     const candidates = IDLE_POOL.filter(e => e.name !== 'face').map(e => e.name)
-    return { [pick(candidates)]: 3 }
+    return { [candidates[Math.floor(Math.random() * candidates.length)]]: 3 }
 }
 
 function resetRest() {
@@ -134,30 +125,12 @@ function advanceRestPhase() {
         if (restTime >= sleepThreshold) {
             restPhase = 'sleep'
             phaseFace = 'faceSleepy'
-            phaseUntil = restTime + rand(SLEEP_HOLD_MIN, SLEEP_HOLD_MAX)
         } else if (restTime >= phaseUntil) {
             phaseFace = pickIdleFace(phaseFace)
             phaseUntil = restTime + rand(IDLE_DWELL_MIN, IDLE_DWELL_MAX)
         }
-        return
     }
-    if (restPhase === 'sleep' && restTime >= phaseUntil) {
-        if (Math.random() < LONG_WAKE_CHANCE) {
-            restPhase = 'long_wake'
-            phaseFace = pickIdleFace('faceSleepy')
-            phaseUntil = restTime + rand(LONG_WAKE_MIN, LONG_WAKE_MAX)
-        } else {
-            restPhase = 'wake'
-            phaseFace = pick(WAKE_POOL)
-            phaseUntil = restTime + rand(WAKE_STIR_MIN, WAKE_STIR_MAX)
-        }
-        return
-    }
-    if ((restPhase === 'wake' || restPhase === 'long_wake') && restTime >= phaseUntil) {
-        restPhase = 'sleep'
-        phaseFace = 'faceSleepy'
-        phaseUntil = restTime + rand(SLEEP_HOLD_MIN, SLEEP_HOLD_MAX)
-    }
+    // 'sleep' is terminal — stay sleepy until the ragdoll is disturbed.
 }
 const deg2rad = (d) => (d * Math.PI) / 180
 
