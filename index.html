@@ -18,6 +18,8 @@
                 width: 100vw;
                 height: 100vh;
                 cursor: grab;
+                /* Required so Chrome Android doesn't consume pointermove for native pan/scroll. */
+                touch-action: none;
             }
             canvas.dragging { cursor: grabbing; }
             #hud {
