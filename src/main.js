@@ -310,18 +310,24 @@ function buildWorld() {
     const ARM_TILT = deg2rad(20)  // arms tilt upward so wrists sit higher than shoulders
     const armDx = Math.cos(ARM_TILT) * ARM_L / 2
     const armDy = Math.sin(ARM_TILT) * ARM_L / 2
+    // Arms are deliberately lighter and less damped than legs so they wobble
+    // more — keeps the upper-body feeling reactive while the legs anchor.
+    const ARM_MASS = 0.3
+    const ARM_ANG_DAMP = 0.03
     const leftArm = makeLimbSegment({
         position: [-SHOULDER_X - armDx, shell.position[1] + SHOULDER_Y + armDy],
-        width: ARM_W, length: ARM_L, sprite: sprites.arm,
+        width: ARM_W, length: ARM_L, sprite: sprites.arm, mass: ARM_MASS,
     })
     leftArm.angle = -ARM_TILT  // tilt left arm: shoulder side (local +x) goes down-right, wrist side (-x) goes up-left
+    leftArm.angularDamping = ARM_ANG_DAMP
     leftArm.__sw = ARM_SPRITE_W
     leftArm.__sh = ARM_SPRITE_H
     const rightArm = makeLimbSegment({
         position: [SHOULDER_X + armDx, shell.position[1] + SHOULDER_Y + armDy],
-        width: ARM_W, length: ARM_L, sprite: sprites.arm,
+        width: ARM_W, length: ARM_L, sprite: sprites.arm, mass: ARM_MASS,
     })
     rightArm.angle = ARM_TILT
+    rightArm.angularDamping = ARM_ANG_DAMP
     rightArm.__sw = ARM_SPRITE_W
     rightArm.__sh = ARM_SPRITE_H
     rightArm.__flipX = true
@@ -341,7 +347,7 @@ function buildWorld() {
     const HAND_SPRITE_ANCHOR_Y = 1.0
     const leftHand = makeEndCap({
         position: [leftWristX, leftWristY],
-        radius: HAND_R, sprite: sprites.hand,
+        radius: HAND_R, sprite: sprites.hand, mass: 0.15,
     })
     leftHand.angle = HAND_REST
     leftHand.__flipX = tune.HAND_FLIPX
@@ -349,7 +355,7 @@ function buildWorld() {
     leftHand.__spriteAnchorY = HAND_SPRITE_ANCHOR_Y
     const rightHand = makeEndCap({
         position: [rightWristX, rightWristY],
-        radius: HAND_R, sprite: sprites.hand,
+        radius: HAND_R, sprite: sprites.hand, mass: 0.15,
     })
     rightHand.angle = -HAND_REST
     rightHand.__flipX = !tune.HAND_FLIPX
