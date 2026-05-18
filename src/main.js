@@ -14,6 +14,17 @@ import faceWinkingUrl from '/parts/Winking.svg?url'
 
 const SVG_PX_PER_UNIT = 100
 
+// Phone-screen play area. Aspect-locked (~9:16) so the bounds always feel
+// like a phone regardless of window dimensions; resize() zooms the camera
+// to fit this area into the viewport.
+const GROUND_Y = -3.0
+const PHONE_H_WORLD = 7.0
+const PHONE_W_WORLD = PHONE_H_WORLD * (9 / 16)
+const PHONE_LEFT_X = -PHONE_W_WORLD / 2
+const PHONE_RIGHT_X = PHONE_W_WORLD / 2
+const PHONE_TOP_Y = GROUND_Y + PHONE_H_WORLD
+const PHONE_CENTER_Y = (GROUND_Y + PHONE_TOP_Y) / 2
+
 // Sizes are picked so the visible black stroke on every part matches the
 // shell's — see parts/README.md for the calibration table.
 const SHELL_LOBE_R = 0.45
@@ -143,7 +154,7 @@ const ctx = canvas.getContext('2d')
 let world
 let parts
 let pixelsPerUnit = 140
-const cameraOffset = { x: 0, y: -1.5 }
+const cameraOffset = { x: 0, y: PHONE_CENTER_Y }
 
 function loadImage(url) {
     return new Promise((res, rej) => {
@@ -212,7 +223,13 @@ function resize() {
     canvas.style.width = window.innerWidth + 'px'
     canvas.style.height = window.innerHeight + 'px'
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    const newPpu = Math.min(window.innerWidth, window.innerHeight) / 6
+    // Fit the phone-shaped play area (PHONE_W_WORLD × PHONE_H_WORLD) into
+    // the viewport with a small margin so the walls always sit just inside
+    // the screen edges.
+    const newPpu = Math.min(
+        window.innerWidth / PHONE_W_WORLD,
+        window.innerHeight / PHONE_H_WORLD,
+    ) * 0.95
     if (dpr !== currentDpr || newPpu !== pixelsPerUnit) {
         bitmapCache.clear()
         currentDpr = dpr
@@ -410,14 +427,28 @@ function buildWorld() {
     addRev(leftLeg, leftFoot, [0, -LEG_L / 2], [FOOT_PIVOT_X, 0], -ANKLE_LIMIT, ANKLE_LIMIT)
     addRev(rightLeg, rightFoot, [0, -LEG_L / 2], [FOOT_PIVOT_X, 0], -ANKLE_LIMIT, ANKLE_LIMIT)
 
-    const ground = new p2.Body({ position: [0, -3.0] })
-    const plane = new p2.Plane()
-    plane.collisionGroup = GROUND
-    plane.collisionMask = BODYPARTS
-    ground.addShape(plane)
+    // The phone-shaped play area is bounded by a ground plane, two side
+    // walls and a ceiling. Each plane's body.angle rotates its normal to
+    // point inward.
+    function makeFrame(pos, angle) {
+        const body = new p2.Body({ position: pos, angle })
+        const plane = new p2.Plane()
+        plane.collisionGroup = GROUND
+        plane.collisionMask = BODYPARTS
+        body.addShape(plane)
+        body.__isFrame = true
+        return body
+    }
+    const ground = makeFrame([0, GROUND_Y], 0)
+    const leftWall = makeFrame([PHONE_LEFT_X, 0], -Math.PI / 2)
+    const rightWall = makeFrame([PHONE_RIGHT_X, 0], Math.PI / 2)
+    const ceiling = makeFrame([0, PHONE_TOP_Y], Math.PI)
     world.addBody(ground)
+    world.addBody(leftWall)
+    world.addBody(rightWall)
+    world.addBody(ceiling)
 
-    parts = { shell, ground }
+    parts = { shell, ground, leftWall, rightWall, ceiling }
     faceAngle = shell.angle
     faceAngularVel = 0
     // Limb sprite dimensions (ARM_SPRITE_W etc.) depend on tune.ARM_L/LEG_L —
@@ -493,20 +524,26 @@ function drawFace() {
     ctx.restore()
 }
 
-function drawGround() {
-    const groundY = parts.ground.position[1]
-    const top = worldToScreen(0, groundY)
-    ctx.fillStyle = '#000'
-    ctx.fillRect(0, top.y, window.innerWidth, 4)
-    ctx.fillStyle = 'rgba(0,0,0,0.06)'
-    ctx.fillRect(0, top.y + 4, window.innerWidth, window.innerHeight)
+function drawPhoneFrame() {
+    const tl = worldToScreen(PHONE_LEFT_X, PHONE_TOP_Y)
+    const br = worldToScreen(PHONE_RIGHT_X, GROUND_Y)
+    // Dim the area outside the play bounds so the phone shape reads clearly.
+    ctx.fillStyle = 'rgba(0,0,0,0.08)'
+    if (tl.y > 0) ctx.fillRect(0, 0, window.innerWidth, tl.y)
+    if (br.y < window.innerHeight) ctx.fillRect(0, br.y, window.innerWidth, window.innerHeight - br.y)
+    if (tl.x > 0) ctx.fillRect(0, tl.y, tl.x, br.y - tl.y)
+    if (br.x < window.innerWidth) ctx.fillRect(br.x, tl.y, window.innerWidth - br.x, br.y - tl.y)
+    // Phone outline.
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 3
+    ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y)
 }
 
 function render() {
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
-    drawGround()
+    drawPhoneFrame()
     for (const b of world.bodies) {
-        if (b === parts.shell || b === parts.ground) continue
+        if (b === parts.shell || b.__isFrame) continue
         drawSprite(b)
     }
     drawSprite(parts.shell)
@@ -519,7 +556,7 @@ function drawDebug() {
     ctx.lineWidth = 1.5
     ctx.strokeStyle = 'rgba(0, 150, 255, 0.9)'
     for (const b of world.bodies) {
-        if (b === parts.ground) continue
+        if (b.__isFrame) continue
         for (const s of b.shapes) {
             ctx.save()
             const sp = worldToScreen(b.position[0], b.position[1])
@@ -544,7 +581,7 @@ function drawDebug() {
     }
     // Body centers (small green dots).
     for (const b of world.bodies) {
-        if (b === parts.ground) continue
+        if (b.__isFrame) continue
         const sp = worldToScreen(b.position[0], b.position[1])
         ctx.fillStyle = '#0a0'
         ctx.beginPath()
@@ -662,7 +699,7 @@ window.__ragdoll = {
         const dy = y - parts.shell.position[1]
         const dx = x - parts.shell.position[0]
         for (const b of world.bodies) {
-            if (b !== parts.ground) {
+            if (!b.__isFrame) {
                 b.position[0] += dx
                 b.position[1] += dy
                 b.angle = 0
