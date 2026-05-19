@@ -1,7 +1,15 @@
 # Ragdoll prototype
 
-Local sandbox for a Peanut-mascot ragdoll. Eventual goal: ship this as an
-easter-egg game inside `peanut-ui`.
+Local sandbox for a Peanut-mascot ragdoll.
+
+> **Shipped in peanut-ui** — the engine + sprites were ported into `peanut-ui` as the
+> rewards-screen easter egg. See **[peanutprotocol/peanut-ui#2061](https://github.com/peanutprotocol/peanut-ui/pull/2061)**
+> for the integration (component, feature flag, drawer wiring).
+>
+> This repo stays as the **authoring sandbox** for the engine + parts. Edits land here
+> first (hot-reload, no Next.js build cycle), then get ported across to
+> [`peanut-ui/src/components/PeanutRagdoll/`](https://github.com/peanutprotocol/peanut-ui/tree/dev/src/components/PeanutRagdoll)
+> when ready.
 
 ## Running locally
 
@@ -97,15 +105,48 @@ Hard rules — see [parts/README.md](parts/README.md) for the full list:
 - Mouse interaction only — no touch yet.
 - Single fixed camera. No zoom/pan.
 
-## What's next
+## Shipped — divergences from the original "What's next"
 
-Eventual home is [peanut-ui](../mono/peanut-ui/) as an easter egg. Likely shape:
+The integration in [peanut-ui#2061](https://github.com/peanutprotocol/peanut-ui/pull/2061)
+landed with these calls (different from this README's original speculation):
 
-1. `<PeanutRagdoll />` client component — fullscreen canvas overlay with close
-   button.
-2. Trigger: konami code, secret long-press on the logo, or a hidden route.
-3. Optional score/leaderboard via `localStorage`.
+- **Trigger** is **triple-click on the "Rewards" heading** in `/rewards`, not a konami
+  code or hidden route. Discovered organically, no docs needed.
+- **Modal** is the existing vaul-based bottom-sheet **Drawer** (`max-h-[80vh]`,
+  `md:max-w-xl`), not a fullscreen canvas overlay. Matches the rest of the app's
+  design system (BadgeStatusDrawer, ChooseNetworkDrawer, ContributorsDrawer).
+- **Sizing** is **container-responsive** via `ResizeObserver` on the canvas's parent,
+  not viewport-locked. The cage reflows to the drawer panel.
+- **Lifecycle** wrapped in `startRagdoll(canvas) → cleanup` instead of the old
+  module-level `start()` + `window.__ragdoll` debug API. Clean mount/unmount, no
+  leaked RAF or listeners.
+- **No leaderboard / scoring.** Just the toy.
+- **Feature-flagged** but **on by default** — `NEXT_PUBLIC_RAGDOLL_ENABLED=false`
+  is the kill-switch (build-time, dead-code-eliminates the chunk + `p2-es`).
+- **Dev chrome stripped** from the production port: `tune` struct, `drawDebug`,
+  `WIREFRAMES`, R-key reset, `window.__ragdoll` — all gone. Still here in this
+  sandbox for authoring.
+- **`p2-es` pinned exact** (`1.2.3`, no caret) in peanut-ui's package.json.
 
-When we port: the SVGs and `main.js` move under `peanut-ui/src/`; the canvas
-becomes a `useRef` inside a `'use client'` component; `p2-es` lands as a real
-dependency (subject to the repo's 14-day supply-chain floor).
+### Future placements (post-launch, pending team buy-in)
+
+The `PeanutRagdoll` component is reusable wherever a peanut would soften the moment.
+Ideas listed in the [component header in peanut-ui](https://github.com/peanutprotocol/peanut-ui/blob/dev/src/components/PeanutRagdoll/index.tsx):
+
+- KYC "verifying" wait modal — flop a peanut while Sumsub takes 1–3 days.
+- 404 page — face-planted ragdoll instead of the static crying-peanut GIF.
+- Activation milestones — 2 s ragdoll-confetti when a step flips done.
+- Tier-up moment on `/rewards` — auto-open this drawer, drop the new badge as
+  a physics body that lands on the peanut.
+- Card activation — peanut + card + coins, all in one physics box.
+- Peanut Jail / waitlist — peanut bumping the bars beats a static "you're on
+  the list" gif.
+
+### Authoring workflow now
+
+Edit here → smoke-test in Vite (`npm run dev`) → mirror the change to
+[`peanut-ui/src/components/PeanutRagdoll/`](https://github.com/peanutprotocol/peanut-ui/tree/dev/src/components/PeanutRagdoll)
+and open a PR against `dev`. Keep the two `main.js` ↔ `ragdoll.ts` files in
+sync manually for now — the runtime port is intentionally minimally diverged
+(refactored to take a canvas + return a cleanup, container-sized rather than
+viewport-sized; everything else is one-for-one).
